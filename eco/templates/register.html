@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro de Organización</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+        <style>
+/* ========= site.css (reemplaza el CSS en todas tus páginas) ========= */
+
+/* Variables para cambios rápidos */
+:root{
+  --font-sans: "Segoe UI", Arial, Helvetica, sans-serif;
+  --text-light: #0c0d0d;        /* texto principal sobre fondos oscuros */
+  --text-dark:  #0f1720;        /* texto principal sobre fondos claros */
+  --muted:      #9aa8bb;
+  --accent:     #90caf9;
+  --accent-strong:#1565c0;
+  --bg-overlay: rgba(6,10,18,0.62); /* sube valor para más oscuridad */
+  --card-bg-dark: rgba(30,34,44,0.90);
+  --card-bg-light: rgba(255,255,255,0.94);
+  --card-radius: 14px;
+  --shadow: 0 6px 28px rgba(2,6,23,0.22);
+  --btn-bg: #232a3b;
+  --btn-hover: #3a4663;
+  --badge-bg: #232a3b;
+  --badge-color: #90caf9;
+  --table-head-dark: #232a3b;
+  --table-head-light: #e9f0ff;
+  --focus-ring: rgba(21,101,192,0.20);
+  --min-font: 15px;
+  --bg-image: url('https://img.freepik.com/fotos-premium/back-view-of-professional-businessman-standing-in-front-of-modern-commercial-building_693425-4933.jpg');
+}
+
+/* Reset ligero */
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  font-family:var(--font-sans);
+  color:var(--text-light);
+  font-size:var(--min-font);
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  position:relative;
+  overflow-x:hidden;
+  background-color:#000; /* fallback */
+}
+
+/* Fondo de página con blur + overlay para asegurar legibilidad */
+body::before{
+  content:"";
+  position:fixed;
+  inset:0;
+  z-index:-2;
+  background-image: var(--bg-image);
+  background-repeat:no-repeat;
+  background-position:center;
+  background-size:cover;
+  filter: blur(6px) saturate(.98);
+  transform: translateZ(0);
+}
+body::after{
+  content:"";
+  position:fixed;
+  inset:0;
+  z-index:-1;
+  background: linear-gradient(var(--bg-overlay), rgba(0,0,0,0.45));
+}
+
+/* Contenedor principal (mantiene tu .container actual) */
+.container {
+  max-width:1100px;
+  margin:40px auto;
+  padding:30px;
+  background:var(--card-bg-dark);
+  border-radius:var(--card-radius);
+  box-shadow:var(--shadow);
+  color:var(--text-light);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+/* Variante clara (útil si en alguna página prefieres tarjeta clara) */
+.container.light {
+  background:var(--card-bg-light);
+  color:var(--text-dark);
+}
+
+/* Encabezados */
+h1,h2,h3{
+  margin:0 0 18px 0;
+  line-height:1.08;
+  font-weight:700;
+  color:inherit;
+  letter-spacing:0.3px;
+}
+
+/* Tablas: diseño legible y responsivo */
+.table-responsive{
+  width:100%;
+  overflow:auto;
+  -webkit-overflow-scrolling:touch;
+  margin-bottom:18px;
+}
+.table{
+  width:100%;
+  border-collapse:collapse;
+  background:transparent;
+  font-size:0.98rem;
+  border-radius:8px;
+  overflow:hidden;
+  box-shadow:none;
+}
+.table th, .table td{
+  padding:12px 14px;
+  text-align:left;
+  vertical-align:middle;
+  border-bottom:1px solid rgba(255,255,255,0.04);
+  font-weight:600;
+}
+
+/* Encabezado de tabla — adapta según .container.light */
+.table thead th{
+  background:var(--table-head-dark);
+  color:var(--text-light);
+  font-weight:700;
+  border-bottom:2px solid rgba(255,255,255,0.06);
+}
+.container.light .table thead th{
+  background:var(--table-head-light);
+  color:var(--text-dark);
+  border-bottom:2px solid rgba(15,23,36,0.06);
+}
+
+/* Celdas */
+.table td{
+  color:var(--text-light);
+  font-weight:600;
+}
+.container.light .table td{
+  color:var(--text-dark);
+}
+
+/* Botones — armonizados y accesibles */
+.btn, .btn-secondary, .btn-primary {
+  display:inline-block;
+  border:0;
+  padding:8px 22px;
+  border-radius:8px;
+  background:var(--btn-bg);
+  color:var(--text-light);
+  font-weight:700;
+  text-decoration:none;
+  cursor:pointer;
+  transition: background .18s ease, transform .08s ease;
+}
+.btn:hover, .btn-secondary:hover, .btn-primary:hover{
+  background:var(--btn-hover);
+  color:#fff;
+  transform: translateY(-1px);
+}
+.container.light .btn, .container.light .btn-secondary, .container.light .btn-primary{
+  color:#fff; /* mantenemos contraste sobre botón oscuro */
+}
+
+/* Enlaces */
+a { color:var(--accent); text-decoration:none; font-weight:600; }
+a:hover { color:var(--accent-strong); text-decoration:underline; }
+
+/* Badges */
+.badge{
+  display:inline-block;
+  padding:6px 12px;
+  border-radius:999px;
+  background:var(--badge-bg);
+  color:var(--badge-color);
+  font-weight:700;
+  min-width:44px;
+  text-align:center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+}
+
+/* Texto centrado y utilidades */
+.text-center{ text-align:center; color:inherit; font-weight:600; }
+.muted{ color:var(--muted); font-weight:500; }
+
+/* Sutil sombra de texto para evitar “desvanecimiento” en bordes sobre imagen */
+.container, .table th, .table td, .btn, .badge {
+  text-shadow: 0 1px 0 rgba(0,0,0,0.18);
+}
+
+/* Foco accesible */
+:focus{
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 3px;
+  border-radius:6px;
+}
+
+/* Responsive: ajuste en pantallas pequeñas */
+@media (max-width: 768px){
+  :root{ --min-font:14px; }
+  body{ font-size:14px; }
+  .container{ margin:18px; padding:18px; }
+  .table th, .table td{ padding:10px; font-size:0.95rem; }
+  .btn{ padding:8px 16px; font-size:0.96rem; }
+}
+
+/* Preferencias para reducir movimiento */
+@media (prefers-reduced-motion: reduce){
+  *{ transition:none !important; animation:none !important; }
+}
+
+/* Helpers opcionales (puedes usarlas en plantillas puntuales) */
+.k-card {
+  background:rgba(255,255,255,0.03);
+  padding:16px;
+  border-radius:10px;
+}
+.k-muted {
+  color:var(--muted);
+  font-weight:500;
+}
+
+</style>
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h3 class="mb-0">Registro de Organización</h3>
+                    </div>
+                    <div class="card-body">
+                        {% if messages %}
+                            {% for message in messages %}
+                                <div class="alert alert-{{ message.tags }}">
+                                    {{ message }}
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                        
+                        <form method="post">
+                            {% csrf_token %}
+                            
+                            <div class="mb-3">
+                                <label for="{{ form.name.id_for_label }}" class="form-label">{{ form.name.label }}</label>
+                                {{ form.name }}
+                                {% if form.name.errors %}
+                                    <div class="text-danger">
+                                        {{ form.name.errors }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="{{ form.email.id_for_label }}" class="form-label">{{ form.email.label }}</label>
+                                {{ form.email }}
+                                {% if form.email.errors %}
+                                    <div class="text-danger">
+                                        {{ form.email.errors }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="{{ form.password.id_for_label }}" class="form-label">{{ form.password.label }}</label>
+                                {{ form.password }}
+                                {% if form.password.errors %}
+                                    <div class="text-danger">
+                                        {{ form.password.errors }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="{{ form.confirm_password.id_for_label }}" class="form-label">Confirmar Contraseña</label>
+                                {{ form.confirm_password }}
+                                {% if form.confirm_password.errors %}
+                                    <div class="text-danger">
+                                        {{ form.confirm_password.errors }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="d-grid gap-2">
+                                <button type="submit" class="btn btn-primary">Registrar</button>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="card-footer text-center">
+                        <a href="{% url 'register' %}">Volver a la página principal</a>
+                         <a href="{% url 'login' %}">Ya tengo una cuenta</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

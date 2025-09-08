@@ -1,0 +1,36 @@
+"""
+URL configuration for eco project.
+
+The `urlpatterns` list routes URLs to views. For more information please see:
+    https://docs.djangoproject.com/en/5.2/topics/http/urls/
+Examples:
+Function views
+    1. Add an import:  from my_app import views
+    2. Add a URL to urlpatterns:  path('', views.home, name='home')
+Class-based views
+    1. Add an import:  from other_app.views import Home
+    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
+Including another URLconf
+    1. Import the include() function: from django.urls import include, path
+    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
+"""
+from django.contrib import admin
+from django.urls import path
+from dashboard import views
+from register import views as register_views
+from login import views as login_views
+
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    path('dashboard/', views.dashboard, name='dashboard'), # Agrega nombre para que mas facil de llamar
+    path('', views.home, name='home'),  # <-- Esta línea permite acceder con la URL raíz
+    path('register/', register_views.register_organization, name='register'),
+    path('login/', login_views.login_view, name='login'),
+    path('password-reset/', login_views.password_reset_view, name='password_reset'),
+    path('devices-by-category/', views.devices_by_category, name='devices_by_category'),
+    path('devices-by-zone/', views.devices_by_zone, name='devices_by_zone'),
+    path('alerts/', views.alerts, name='alerts'),
+    path('measurements/', views.measurements, name='measurements'),
+    path('devices/', views.devices_list, name='devices_list'),
+    path('devices/<int:id>/', views.device_detail, name='device_detail'),
+]

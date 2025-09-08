@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Detalle de Dispositivo</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+        <style>
+body {
+    position: relative;
+    font-family: 'Segoe UI', 'Montserrat', Arial, sans-serif;
+    color: #111 !important;
+    font-size: 1.25em;
+    min-height: 100vh;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+}
+body::before {
+    content: "";
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    z-index: -1;
+    background: url('https://img.freepik.com/fotos-premium/back-view-of-professional-businessman-standing-in-front-of-modern-commercial-building_693425-4933.jpg') no-repeat center center fixed;
+    background-size: cover;
+    filter: blur(8px) brightness(0.7);
+}
+
+.container {
+    background: rgba(255,255,255,0.85);
+    border-radius: 16px;
+    padding: 32px;
+    margin-top: 40px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.15);
+    color: #111 !important;
+}
+
+h2 {
+    font-family: 'Montserrat', 'Segoe UI', Arial, sans-serif;
+    font-weight: 800;
+    margin-bottom: 24px;
+    color: #111 !important;
+    letter-spacing: 1px;
+    font-size: 2.2em;
+}
+
+.table {
+    background: rgba(255,255,255,0.95);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+    font-size: 1.15em;
+}
+
+.table th {
+    background: #e3eafc;
+    color: #111 !important;
+    font-weight: 700;
+    border-bottom: 2px solid #b6c7e6;
+    font-size: 1.1em;
+    letter-spacing: 0.5px;
+}
+
+.table td {
+    vertical-align: middle;
+    color: #111 !important;
+    font-weight: 500;
+}
+
+.btn, .btn-secondary, .btn-primary {
+    border-radius: 6px;
+    padding: 10px 28px;
+    font-size: 1.15em;
+    margin-top: 16px;
+    background: #232a3b;
+    color: #fff;
+    border: none;
+    transition: background 0.2s;
+    font-family: 'Montserrat', 'Segoe UI', Arial, sans-serif;
+    font-weight: 600;
+}
+
+.btn:hover, .btn-secondary:hover, .btn-primary:hover {
+    background: #3a4663;
+    color: #fff;
+}
+
+a {
+    color: #1565c0;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 1.08em;
+    font-family: 'Montserrat', 'Segoe UI', Arial, sans-serif;
+}
+
+a:hover {
+    text-decoration: underline;
+    color: #111 !important;
+}
+
+.badge {
+    font-size: 1.08em;
+    padding: 8px 16px;
+    background: #e3eafc;
+    color: #111 !important;
+    font-weight: 600;
+    border-radius: 12px;
+}
+
+.text-center {
+    color: #111 !important;
+    font-size: 1.1em;
+    font-weight: 500;
+}
+</style>
+</head>
+<body>
+<div class="container mt-4">
+    {% if dispositivo %}
+        <h2>{{ dispositivo.nombre }}</h2>
+        <p><strong>Categoría:</strong> {{ dispositivo.categoria }}</p>
+        <p><strong>Zona:</strong> {{ dispositivo.zona }}</p>
+
+        <h4 class="mt-4">Mediciones</h4>
+        {% if mediciones %}
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>Fecha/Hora</th>
+                        <th>Valor</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for m in mediciones %}
+                    <tr>
+                        <td>{{ m.fecha_hora }}</td>
+                        <td>{{ m.valor }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <div class="alert alert-info">No existen mediciones para este dispositivo.</div>
+        {% endif %}
+
+        <h4 class="mt-4">Alertas</h4>
+        {% if alertas %}
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>Fecha/Hora</th>
+                        <th>Severidad</th>
+                        <th>Mensaje</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for a in alertas %}
+                    <tr>
+                        <td>{{ a.fecha_hora }}</td>
+                        <td>{{ a.severidad }}</td>
+                        <td>{{ a.mensaje }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <div class="alert alert-info">No existen alertas para este dispositivo.</div>
+        {% endif %}
+    {% else %}
+        <div class="alert alert-danger">Dispositivo no encontrado.</div>
+    {% endif %}
+    <a href="{% url 'devices_list' %}" class="btn btn-secondary mt-3">← Volver al listado</a>
+</div>
+</body>
+</html>
