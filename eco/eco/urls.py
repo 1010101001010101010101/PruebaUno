@@ -33,4 +33,6 @@ urlpatterns = [
     path('measurements/', views.measurements, name='measurements'),
     path('devices/', views.devices_list, name='devices_list'),
     path('devices/<int:id>/', views.device_detail, name='device_detail'),
+    path('logout/', views.logout_view, name='logout'),
 ]
+

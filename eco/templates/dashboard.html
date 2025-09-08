@@ -106,12 +106,20 @@ a:hover {
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
+                <ul class="navbar-nav ms-auto align-items-center">
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'devices_list' %}">Dispositivos</a>
                     </li>
                     <li class="nav-item">
                         <span class="nav-link">Bienvenido, {{ organization_name }}</span>
+                    </li>
+
+                    {# Botón Cerrar sesión: usa POST para mayor seguridad #}
+                    <li class="nav-item ms-2">
+                        <form method="post" action="{% url 'logout' %}" class="d-inline">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-outline-light btn-sm">Cerrar sesión</button>
+                        </form>
                     </li>
                 </ul>
             </div>

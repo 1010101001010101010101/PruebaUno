@@ -1,3 +1,4 @@
+# dashboard/views.py
 from functools import wraps
 from datetime import timedelta
 
@@ -8,8 +9,12 @@ from django.utils import timezone
 from django.http import Http404
 
 from django.core.exceptions import FieldError
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
-from .models import Device, Measurement, Alert
+from django.contrib.auth import logout as auth_logout
+from django.views.decorators.http import require_POST
+
+from .models import Device, Measurement, Alert, Organization
 
 
 def login_required(view_func):
@@ -26,10 +31,53 @@ def login_required(view_func):
     return wrapper
 
 
+def _get_organization(request):
+    """
+    Intenta obtener la organización desde sesión o desde el user (profile o campo organization).
+    Devuelve None si no se encuentra.
+    """
+    org = None
+    org_id = request.session.get("organization_id")
+    if org_id:
+        try:
+            org = Organization.objects.get(pk=org_id)
+        except Organization.DoesNotExist:
+            org = None
+
+    if org is None and request.user.is_authenticated:
+        # Profile con FK organization
+        profile = getattr(request.user, "profile", None)
+        if profile and getattr(profile, "organization", None):
+            org = profile.organization
+        # CustomUser con campo organization
+        if org is None:
+            org = getattr(request.user, "organization", None)
+
+    return org
+
+
+@require_POST
+def logout_view(request):
+    """
+    Cierra sesión (POST recomendado). Limpia request.session y desloguea al user de auth.
+    Redirige a 'login'.
+    """
+    # limpia la sesión completa (esto borra organization_id, is_logged_in, etc.)
+    request.session.flush()
+    # Si usás django auth también lo cerramos (no falla si no hay user)
+    try:
+        auth_logout(request)
+    except Exception:
+        pass
+    messages.info(request, "Sesión cerrada.")
+    return redirect('login')
+
+
 @login_required
 def dashboard(request):
     organization_name = request.session.get('organization_name', '')
-    organization_id = request.session.get('organization_id')
+    org = _get_organization(request)
+    organization_id = org.id if org else request.session.get('organization_id')
 
     if not organization_id:
         messages.error(request, 'Sesión inválida. Por favor, inicia sesión nuevamente.')
@@ -45,7 +93,6 @@ def dashboard(request):
         )
         dispositivos_por_categoria = {c['category__name'] or 'Sin categoría': c['conteo'] for c in categorias_qs}
     except FieldError:
-        # si category no es FK con name
         categorias_qs = (
             Device.objects
             .filter(organization_id=organization_id)
@@ -72,22 +119,47 @@ def dashboard(request):
         )
         dispositivos_por_zona = {z.get('zone') or 'Sin zona': z['conteo'] for z in zonas_qs}
 
-    # --- Alertas por severidad (dict alert_type -> conteo) ---
-    severidad_qs = (
-        Alert.objects
-        .filter(device__organization_id=organization_id)
-        .values('alert_type')
-        .annotate(conteo=Count('id'))
-    )
-    alertas_por_severidad = {s.get('alert_type') or 'Sin tipo': s['conteo'] for s in severidad_qs}
+    # --- Alertas por severidad (normalizamos keys) ---
+    severidad_counts = {}
+    try:
+        sever_qs = (
+            Alert.objects
+            .filter(device__organization_id=organization_id)
+            .values('alert_type')
+            .annotate(conteo=Count('id'))
+        )
+        for r in sever_qs:
+            key = (r.get('alert_type') or '').upper()
+            severidad_counts[key] = r['conteo']
+    except FieldError:
+        sever_qs = (
+            Alert.objects
+            .filter(device__organization_id=organization_id)
+            .values('severity')
+            .annotate(conteo=Count('id'))
+        )
+        for r in sever_qs:
+            key = (r.get('severity') or '').upper()
+            severidad_counts[key] = r['conteo']
 
-    # --- Alertas recientes (QuerySet para usar atributos y device.name en template) ---
-    alertas_recientes = (
+    # Mapeo a variables de tarjeta (soporta CRITICAL/HIGH/MEDIUM o GRAVE/ALTO/MEDIANO)
+    conteo_grave   = severidad_counts.get('CRITICAL') or severidad_counts.get('GRAVE') or 0
+    conteo_alto    = severidad_counts.get('HIGH') or severidad_counts.get('ALTO') or 0
+    conteo_mediano = severidad_counts.get('MEDIUM') or severidad_counts.get('MEDIANO') or 0
+
+    # --- Alertas recientes (normalizamos alert_type para la plantilla) ---
+    raw_alerts_qs = (
         Alert.objects
         .filter(device__organization_id=organization_id)
         .select_related('device')
         .order_by('-created_at')[:10]
     )
+
+    alertas_recientes = []
+    for a in raw_alerts_qs:
+        at = getattr(a, 'alert_type', None) or getattr(a, 'severity', None) or ''
+        setattr(a, 'alert_type', at)
+        alertas_recientes.append(a)
 
     # --- Últimas mediciones: transformadas a dicts con claves esperadas por template ---
     ultimas_med_qs = (
@@ -100,35 +172,35 @@ def dashboard(request):
     ultimas_mediciones = []
     for m in ultimas_med_qs:
         # fecha_hora: intenta varios nombres comunes
-        fecha = getattr(m, 'fecha_hora', None) or getattr(m, 'timestamp', None) or getattr(m, 'created_at', None)
+        fecha = getattr(m, 'fecha_hora', None) or getattr(m, 'timestamp', None) or getattr(m, 'measured_at', None) or getattr(m, 'created_at', None)
+        fecha_str = fecha.strftime("%Y-%m-%d %H:%M:%S") if fecha else ''
         # valor: intenta varios nombres
         valor = getattr(m, 'valor', None)
         if valor is None:
             valor = getattr(m, 'value', None)
         if valor is None:
-            # fallback a cualquier campo numérico/str disponible (no obligatorio)
             valor = getattr(m, 'reading', None)
-
-        dispositivo_nombre = None
-        dispositivo_id = None
-        if getattr(m, 'device', None):
-            dispositivo_nombre = getattr(m.device, 'name', str(m.device))
-            dispositivo_id = getattr(m.device, 'id', None)
+        # dispositivo
+        dispositivo_nombre = getattr(m.device, 'name', str(getattr(m, 'device', '')))
+        dispositivo_id = getattr(m.device, 'id', None)
 
         ultimas_mediciones.append({
-            'fecha_hora': fecha,
+            'fecha_hora': fecha_str,
             'valor': valor,
             'dispositivo': dispositivo_nombre,
-            'device_id': dispositivo_id,  # por si en plantilla quieres linkear
+            'device_id': dispositivo_id,
         })
 
     context = {
-        'organization_name': organization_name,
+        'organization_name': organization_name or (org.name if org else "Global"),
         'dispositivos_por_categoria': dispositivos_por_categoria,
         'dispositivos_por_zona': dispositivos_por_zona,
-        'alertas_por_severidad': alertas_por_severidad,
+        'alertas_por_severidad': severidad_counts,
         'alertas_recientes': alertas_recientes,
         'ultimas_mediciones': ultimas_mediciones,
+        'conteo_grave': conteo_grave,
+        'conteo_alto': conteo_alto,
+        'conteo_mediano': conteo_mediano,
     }
 
     return render(request, 'dashboard.html', context)
@@ -140,7 +212,8 @@ def home(request):
 
 @login_required
 def devices_by_category(request):
-    organization_id = request.session.get('organization_id')
+    org = _get_organization(request)
+    organization_id = org.id if org else request.session.get('organization_id')
     if not organization_id:
         messages.error(request, 'Sesión inválida. Por favor, inicia sesión nuevamente.')
         return redirect('login')
@@ -169,7 +242,8 @@ def devices_by_category(request):
 
 @login_required
 def devices_by_zone(request):
-    organization_id = request.session.get('organization_id')
+    org = _get_organization(request)
+    organization_id = org.id if org else request.session.get('organization_id')
     if not organization_id:
         messages.error(request, 'Sesión inválida. Por favor, inicia sesión nuevamente.')
         return redirect('login')
@@ -198,7 +272,8 @@ def devices_by_zone(request):
 
 @login_required
 def alerts(request):
-    organization_id = request.session.get('organization_id')
+    org = _get_organization(request)
+    organization_id = org.id if org else request.session.get('organization_id')
     if not organization_id:
         messages.error(request, 'Sesión inválida. Por favor, inicia sesión nuevamente.')
         return redirect('login')
@@ -207,31 +282,93 @@ def alerts(request):
         Alert.objects
         .filter(device__organization_id=organization_id)
         .select_related('device')
-        .order_by('-created_at')[:50]
+        .order_by('-created_at')
     )
-    return render(request, 'alerts.html', {'alertas': alerts_qs})
+
+    # Paginación: ?page=
+    page = request.GET.get('page', 1)
+    paginator = Paginator(alerts_qs, 20)  # 20 por página
+    try:
+        alerts_page = paginator.page(page)
+    except (PageNotAnInteger, EmptyPage):
+        alerts_page = paginator.page(1)
+
+    # Normalizar alert_type en cada objeto (para compatibilidad con plantilla)
+    alerts_list = []
+    for a in alerts_page:
+        at = getattr(a, 'alert_type', None) or getattr(a, 'severity', None) or ''
+        setattr(a, 'alert_type', at)
+        alerts_list.append(a)
+
+    return render(request, 'alerts.html', {
+        'alertas': alerts_list,
+        'paginator': paginator,
+        'page_obj': alerts_page,
+    })
 
 
 @login_required
 def measurements(request):
-    organization_id = request.session.get('organization_id')
+    org = _get_organization(request)
+    organization_id = org.id if org else request.session.get('organization_id')
     if not organization_id:
         messages.error(request, 'Sesión inválida. Por favor, inicia sesión nuevamente.')
         return redirect('login')
 
-    # mantenemos el queryset (la plantilla measurements.html espera m.device.id y m.device.name)
+    # Queryset original (para plantillas que esperan objetos)
     measurements_qs = (
         Measurement.objects
         .filter(device__organization_id=organization_id)
         .select_related('device')
-        .order_by('-timestamp')[:50]
+        .order_by('-timestamp')
     )
-    return render(request, 'measurements.html', {'mediciones': measurements_qs})
+
+    # --- Serializamos una lista de dicts (para plantillas que esperan fecha/valor en claves específicas) ---
+    ultimas_mediciones = []
+    for m in measurements_qs[:50]:  # serializamos las primeras 50 para la tabla/paginado posterior
+        fecha = getattr(m, 'fecha_hora', None) or getattr(m, 'timestamp', None) or getattr(m, 'measured_at', None) or getattr(m, 'created_at', None)
+        fecha_str = fecha.strftime("%Y-%m-%d %H:%M:%S") if fecha else ''
+
+        valor = getattr(m, 'valor', None)
+        if valor is None:
+            valor = getattr(m, 'value', None)
+        if valor is None:
+            valor = getattr(m, 'reading', None)
+        # fallback a string para evitar mostrar vacío
+        if valor is None:
+            valor = ''
+
+        dispositivo_nombre = getattr(m.device, 'name', str(getattr(m, 'device', '')))
+        dispositivo_id = getattr(m.device, 'id', None)
+
+        ultimas_mediciones.append({
+            'fecha_hora': fecha_str,
+            'valor': valor,
+            'dispositivo': dispositivo_nombre,
+            'device_id': dispositivo_id,
+            'raw': m,  # opcional: dejo el objeto original por si lo necesitas en la plantilla
+        })
+
+    # Paginación sobre el queryset original (mantiene comportamiento actual)
+    page = request.GET.get('page', 1)
+    paginator = Paginator(measurements_qs, 50)
+    try:
+        measurements_page = paginator.page(page)
+    except (PageNotAnInteger, EmptyPage):
+        measurements_page = paginator.page(1)
+
+    return render(request, 'measurements.html', {
+        'mediciones': measurements_page,      # queryset paginado (m.device, m.timestamp, m.value...)
+        'ultimas_mediciones': ultimas_mediciones,  # lista serializada con fecha/valor/dispositivo
+        'paginator': paginator,
+        'page_obj': measurements_page,
+    })
 
 
 @login_required
 def devices_list(request):
-    organization_id = request.session.get('organization_id')
+    org = _get_organization(request)
+    organization_id = org.id if org else request.session.get('organization_id')
     if not organization_id:
         messages.error(request, 'Sesión inválida. Por favor, inicia sesión nuevamente.')
         return redirect('login')
@@ -260,7 +397,8 @@ def devices_list(request):
 
 @login_required
 def device_detail(request, id):
-    organization_id = request.session.get('organization_id')
+    org = _get_organization(request)
+    organization_id = org.id if org else request.session.get('organization_id')
     if not organization_id:
         messages.error(request, 'Sesión inválida. Por favor, inicia sesión nuevamente.')
         return redirect('login')
